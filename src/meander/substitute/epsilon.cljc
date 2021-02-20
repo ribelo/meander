@@ -12,6 +12,8 @@
             [meander.util.epsilon :as r.util])
   #?(:clj (:import (clojure.lang ExceptionInfo))))
 
+(defmacro if-cljs [then & [else]] (if (:ns &env) then else))
+
 ;; ---------------------------------------------------------------------
 ;; Environment utilities
 
@@ -658,7 +660,8 @@
 (defn compile [node env]
   (let [node (r.subst.syntax/expand-ast node)
         env (merge env (make-env node))
-        [form env] (compile* node env)]
+        [form env] (compile* node env)
+        err (if-cljs cljs.core/ExceptionInfo ExceptionInfo)]
     (r.match/find env
       {:data #{{:error :cata-not-bound}}}
       ::CATA_NOT_BOUND
@@ -674,7 +677,7 @@
                     (if (r.subst.syntax/contains-cata-node? node)
                       `(try
                          [~form*]
-                         (catch ExceptionInfo e#
+                         (catch err e#
                            (if (r.subst.runtime/fail? e#)
                              r.match.runtime/FAIL
                              (throw e#))))
